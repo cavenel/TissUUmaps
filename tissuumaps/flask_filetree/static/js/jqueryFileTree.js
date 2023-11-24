@@ -116,12 +116,14 @@ if (jQuery)
                   const urlParams = new URLSearchParams(queryString);
                   const addLayer = urlParams.get("addlayer");
                   console.log("addLayer", addLayer);
-                  if (addLayer) {
-                    window.parent.flask.server.addLayer(
-                      $(this).attr("rel") + ".dzi"
-                    );
+                  let layerPath = $(this).attr("rel");
+                  if (addLayer || layerPath.endsWith(".dzi")) {
+                    if (!layerPath.endsWith(".dzi")) {
+                      layerPath += ".dzi";
+                    }
+                    window.parent.flask.server.addLayer(layerPath);
                   } else {
-                    h($(this).attr("rel"));
+                    h(layerPath);
                   }
                 }
                 return false;
