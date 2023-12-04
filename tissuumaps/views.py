@@ -712,12 +712,9 @@ def dzi_asso(path):
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
-    # check that level, col and row are integers
-    if not isinstance(level, int) or not isinstance(col, int) or not isinstance(
-        row, int
-    ):
-        abort(404)
-        return
+    level = secure_filename(str(level))
+    col = secure_filename(str(col))
+    row = secure_filename(str(row))
     if not format in ["jpeg", "png"]:
         abort(404)
         return
