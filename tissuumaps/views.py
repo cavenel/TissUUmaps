@@ -653,7 +653,7 @@ def jsonFile(completePath, ext):
 @app.route("/<path:path>.dzi")
 @requires_auth
 def dzi(path):
-    completePath = os.path.join(app.basedir, path)
+    completePath = os.path.abspath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -672,7 +672,7 @@ def dzi(path):
 @app.route("/<path:path>.dzi/info")
 @requires_auth
 def dzi_asso(path):
-    completePath = os.path.join(app.basedir, path)
+    completePath = os.path.abspath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -725,7 +725,11 @@ def tile(path, level, col, row, format):
     "/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
 )
 def tile_asso(path, associated_name, level, col, row, format):
-    slide = _get_slide(path).associated_images[associated_name]
+    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
+    slide = _get_slide(completePath).associated_images[associated_name]
     format = format.lower()
     if format != "jpeg" and format != "png":
         # Not supported by Deep Zoom
