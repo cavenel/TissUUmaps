@@ -1,6 +1,6 @@
 {
 	"name": "papaparse",
-	"version": "5.2.0",
+	"version": "5.3.2",
 	"description": "Fast and powerful CSV parser for the browser that supports web workers and streaming large files. Converts CSV to JSON and JSON to CSV.",
 	"keywords": [
 		"csv",
@@ -43,7 +43,7 @@
 		"grunt": "^1.0.2",
 		"grunt-contrib-uglify": "^3.3.0",
 		"mocha": "^5.2.0",
-		"mocha-headless-chrome": "^2.0.1",
+		"mocha-headless-chrome": "^4.0.0",
 		"open": "7.0.0",
 		"serve-static": "^1.7.1"
 	},
