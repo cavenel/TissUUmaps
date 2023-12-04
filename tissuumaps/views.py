@@ -335,8 +335,10 @@ def _get_slide(path, originalPath=None):
     if not path.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     if not os.path.exists(path):
         abort(404)
+        return
     try:
         slide = app.cache.get(path, originalPath)
         slide.filename = os.path.basename(path)
@@ -344,6 +346,7 @@ def _get_slide(path, originalPath=None):
     except Exception:
         if ".tissuumaps" in path:
             abort(404)
+            return
         try:
             newpath = (
                 os.path.dirname(path)
@@ -357,6 +360,7 @@ def _get_slide(path, originalPath=None):
         except Exception:
             logging.error(traceback.format_exc())
             abort(404)
+            return
 
 
 def get_view_function(url, method="GET"):
@@ -415,6 +419,7 @@ def base_static(path):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     directory = os.path.dirname(completePath) + "/web/"
     filename = os.path.basename(completePath)
     return send_from_directory(directory, filename)
@@ -436,8 +441,10 @@ def slide(filename):
     if not path.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     if not os.path.isfile(path) and not os.path.isfile(path + ".dzi"):
         abort(404)
+        return
     # slide = _get_slide(path)
     slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
     jsonProject = {
@@ -502,6 +509,7 @@ def tmapFile(filename):
     if not json_filename.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     
     # Define error message feedback to user, None means no error message
     errorMessage = None
@@ -601,6 +609,7 @@ def tmapFile(filename):
                 state = {}
         else:
             abort(404)
+            return
 
         # Determine the plugins based on the state
         if "plugins" in state.keys():
@@ -633,6 +642,7 @@ def csvFile(completePath):
         return send_from_directory(directory, filename)
     else:
         abort(404)
+        return
 
 
 @app.route("/<path:completePath>.<any(json, geojson, pbf):ext>")
@@ -642,12 +652,14 @@ def jsonFile(completePath, ext):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
         return send_from_directory(directory, filename)
     else:
         abort(404)
+        return
 
 
 @app.route("/<path:path>.dzi")
@@ -657,6 +669,7 @@ def dzi(path):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     # Check if a .dzi file exists, else use OpenSlide:
     if os.path.isfile(completePath + ".dzi"):
         directory = os.path.dirname(completePath)
@@ -676,6 +689,7 @@ def dzi_asso(path):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     slide = _get_slide(completePath)
     associated_images = []
     for key, im in slide.associated_images.items():
@@ -697,6 +711,7 @@ def tile(path, level, col, row, format):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     if os.path.isfile(f"{completePath}_files/{level}/{col}_{row}.{format}"):
         directory = f"{completePath}_files/{level}/"
         filename = f"{col}_{row}.{format}"
@@ -706,12 +721,14 @@ def tile(path, level, col, row, format):
     # if format != 'jpeg' and format != 'png':
     #    # Not supported by Deep Zoom
     #    abort(404)
+    #    return
     try:
         with slide.tileLock:
             tile = slide.get_tile(level, (col, row))
     except ValueError:
         # Invalid level or coordinates
         abort(404)
+        return
     buf = PILBytesIO()
     tile.save(buf, format, quality=app.config["DEEPZOOM_TILE_QUALITY"])
     resp = make_response(buf.getvalue())
@@ -814,9 +831,11 @@ def h5ad(filename, ext):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     # Check if a .h5ad file exists:
     if not os.path.isfile(completePath):
         abort(404)
+        return
     if "Referer" in request.headers.keys():
         if "h5Utils_worker.js" in request.headers["Referer"]:
             return send_file_partial(completePath)
@@ -845,6 +864,7 @@ def h5ad_csv(path, type, filename, ext):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     filename = unquote(filename)
     csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
     generate_csv = True
@@ -866,6 +886,7 @@ def h5ad_csv(path, type, filename, ext):
 
     if not os.path.isfile(csvPath):
         abort(404)
+        return
     directory = os.path.dirname(csvPath)
     filename = os.path.basename(csvPath)
     return send_from_directory(directory, filename)
@@ -1031,6 +1052,7 @@ def runPlugin(pluginName):
 
     logging.error(completePath + " is not an existing file.")
     abort(404)
+    return
 
 
 @app.route("/plugins/<path:pluginName>/<path:method>", methods=["GET", "POST"])
