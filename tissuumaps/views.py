@@ -792,6 +792,9 @@ def send_file_partial(path):
 
     size = os.path.getsize(path)
     byte1, byte2 = 0, None
+    if len(range_header) > 1000:
+        abort(416)
+        return
     m = re.search(r"(\d+)-(\d*)", range_header)
     g = m.groups()
 
