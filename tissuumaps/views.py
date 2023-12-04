@@ -45,6 +45,7 @@ from tissuumaps_schema.utils import (
     guess_schema_version,
 )
 from werkzeug.exceptions import MethodNotAllowed, NotFound
+from werkzeug.utils import secure_filename
 from werkzeug.routing import RequestRedirect
 
 from tissuumaps import app, read_h5ad
@@ -865,7 +866,13 @@ def h5ad_csv(path, type, filename, ext):
         # Directory traversal
         abort(404)
         return
-    filename = unquote(filename)
+    if type not in ["obs", "var", "uns"]:
+        abort(404)
+        return
+    if ext not in ["h5ad", "adata"]:
+        abort(404)
+        return
+    filename = secure_filename(unquote(filename))
     csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
     generate_csv = True
     if os.path.isfile(csvPath):
