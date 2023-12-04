@@ -833,6 +833,10 @@ def send_file_partial(path):
 @app.route("/<string:filename>.<any(h5ad, adata, h5):ext>")
 @requires_auth
 def h5ad(filename, ext):
+    if ext not in ["h5ad", "adata", "h5"]:
+        abort(404)
+        return
+    filename = secure_filename(filename)
     path = request.args.get("path")
     if not path:
         path = "./"
