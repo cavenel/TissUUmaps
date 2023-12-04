@@ -80,7 +80,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
               // do something, not critical.
             },
             error: (error) ? error : function (data) {
-              interfaceUtils.alert(data.responseText.replace("\n","<br/>"),"Error on the plugin's server response:");
+              interfaceUtils.alert(data.responseText.replace(/\n/g,"<br/>"),"Error on the plugin's server response:");
             },
           });
     }

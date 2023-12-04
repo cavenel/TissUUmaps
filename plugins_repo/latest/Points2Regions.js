@@ -1097,7 +1097,7 @@ Points2Regions._api = function (endpoint, data, success, error) {
       ? error
       : function (data) {
           interfaceUtils.alert(
-            data.responseText.replace("\n", "<br/>"),
+            data.responseText.replace(/\n/g, "<br/>"),
             "Error on the plugin's server response:",
           );
         },

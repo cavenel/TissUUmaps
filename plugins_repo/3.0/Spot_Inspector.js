@@ -564,7 +564,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
     },
     error: function (data) {
       interfaceUtils.alert(
-        data.responseText.replace("\n", "<br/>"),
+        data.responseText.replace(/\n/g, "<br/>"),
         "Error on the plugin's server response",
       );
     },
@@ -781,7 +781,7 @@ Spot_Inspector.getMatrix = function (bbox, layers, markers, order) {
     },
     error: function (data) {
       interfaceUtils.alert(
-        data.responseText.replace("\n", "<br/>"),
+        data.responseText.replace(/\n/g, "<br/>"),
         "Error on the plugin's server response",
       );
     },
