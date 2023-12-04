@@ -729,16 +729,19 @@ def tile_asso(path, associated_name, level, col, row, format):
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
+        return
     slide = _get_slide(completePath).associated_images[associated_name]
     format = format.lower()
     if format != "jpeg" and format != "png":
         # Not supported by Deep Zoom
         abort(404)
+        return
     try:
         tile = slide.get_tile(level, (col, row))
     except ValueError:
         # Invalid level or coordinates
         abort(404)
+        return
     buf = PILBytesIO()
     tile.save(buf, format, quality=app.config["DEEPZOOM_TILE_QUALITY"])
     resp = make_response(buf.getvalue())
