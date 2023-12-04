@@ -96,13 +96,13 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if request.args.get("path"):
-            path = os.path.abspath(
+            path = os.path.normpath(
                 os.path.join(app.basedir, request.args.get("path"), "fake")
             )
         elif "path" not in kwargs.keys():
             path = getPathFromReferrer(request, "")
         else:
-            path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
+            path = os.path.normpath(os.path.join(app.basedir, kwargs["path"]))
         activeFolder = os.path.dirname(path)
         while os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(
             activeFolder + "/auth"
@@ -331,7 +331,7 @@ def internal_server_error(e):
     )
 
 def _get_slide(path, originalPath=None):
-    path = os.path.abspath(os.path.join(app.basedir, path))
+    path = os.path.normpath(os.path.join(app.basedir, path))
     if not path.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -393,7 +393,7 @@ def index():
         if view_function:
             return view_function[0](**view_function[1])
 
-    indexPath = os.path.abspath(os.path.join(app.basedir, "index.html"))
+    indexPath = os.path.normpath(os.path.join(app.basedir, "index.html"))
     if os.path.isfile(indexPath) and app.config["READ_ONLY"]:
         directory = os.path.dirname(indexPath)
         filename = os.path.basename(indexPath)
@@ -411,7 +411,7 @@ def index():
 @app.route("/web/<path:path>")
 @requires_auth
 def base_static(path):
-    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -432,7 +432,7 @@ def slide(filename):
     path = request.args.get("path")
     if not path:
         path = "./"
-    path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    path = os.path.normpath(os.path.join(app.basedir, path, filename))
     if not path.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -464,11 +464,11 @@ def getPathFromReferrer(request, filename):
     try:
         parsed_url = urlparse(request.referrer)
         path = parse_qs(parsed_url.query)["path"][0]
-        path = os.path.abspath(os.path.join(app.basedir, path, filename))
+        path = os.path.normpath(os.path.join(app.basedir, path, filename))
     except Exception:
-        path = os.path.abspath(os.path.join(app.basedir, filename))
+        path = os.path.normpath(os.path.join(app.basedir, filename))
     if not path:
-        path = os.path.abspath(os.path.join(app.basedir, filename))
+        path = os.path.normpath(os.path.join(app.basedir, filename))
     logging.debug(f"Path from referrer: {path}")
     return path
 
@@ -498,7 +498,7 @@ def tmapFile(filename):
     path = request.args.get("path", default="./")
 
     # Create the absolute path to the JSON file
-    json_filename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+    json_filename = os.path.normpath(os.path.join(app.basedir, path, filename) + ".tmap")
     if not json_filename.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -638,7 +638,7 @@ def csvFile(completePath):
 @app.route("/<path:completePath>.<any(json, geojson, pbf):ext>")
 @requires_auth
 def jsonFile(completePath, ext):
-    completePath = os.path.abspath(os.path.join(app.basedir, completePath + "." + ext))
+    completePath = os.path.normpath(os.path.join(app.basedir, completePath + "." + ext))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -653,7 +653,7 @@ def jsonFile(completePath, ext):
 @app.route("/<path:path>.dzi")
 @requires_auth
 def dzi(path):
-    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -672,7 +672,7 @@ def dzi(path):
 @app.route("/<path:path>.dzi/info")
 @requires_auth
 def dzi_asso(path):
-    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -693,7 +693,7 @@ def dzi_asso(path):
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
-    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -725,7 +725,7 @@ def tile(path, level, col, row, format):
     "/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
 )
 def tile_asso(path, associated_name, level, col, row, format):
-    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -805,7 +805,7 @@ def h5ad(filename, ext):
     path = request.args.get("path")
     if not path:
         path = "./"
-    completePath = os.path.abspath(
+    completePath = os.path.normpath(
         os.path.join(app.basedir, path, filename) + "." + ext
     )
     if not completePath.startswith(app.basedir):
@@ -838,7 +838,7 @@ def h5ad(filename, ext):
     "/<path:path>.<any(h5ad, adata):ext>_files/csv/<string:type>/<string:filename>.csv"
 )
 def h5ad_csv(path, type, filename, ext):
-    completePath = os.path.abspath(os.path.join(app.basedir, path + "." + ext))
+    completePath = os.path.normpath(os.path.join(app.basedir, path + "." + ext))
     if not completePath.startswith(app.basedir):
         # Directory traversal
         abort(404)
@@ -1020,7 +1020,7 @@ def load_plugin(name):
 def runPlugin(pluginName):
     for directory in [app.config["PLUGIN_FOLDER_USER"], app.config["PLUGIN_FOLDER"]]:
         filename = pluginName + ".js"
-        completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
+        completePath = os.path.normpath(os.path.join(directory, pluginName + ".js"))
         directory = os.path.dirname(completePath)
         filename = os.path.basename(completePath)
         if os.path.isfile(completePath):
@@ -1054,7 +1054,7 @@ def get_tree():
 @app.route("/get_file_tree")
 def get_file_tree():
     if not app.config["READ_ONLY"]:
-        root_path = os.path.abspath(app.basedir + "/" + request.args.get("root", "./"))
+        root_path = os.path.normpath(app.basedir + "/" + request.args.get("root", "./"))
         if not root_path.startswith(app.basedir):
             # Directory traversal
             abort(404)
