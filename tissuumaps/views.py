@@ -635,7 +635,11 @@ def tmapFile(filename):
 @app.route("/<path:completePath>.csv")
 @requires_auth
 def csvFile(completePath):
-    completePath = os.path.join(app.basedir, completePath + ".csv")
+    completePath = os.path.normpath(os.path.join(app.basedir, completePath + ".csv"))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
+        return
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -708,6 +712,15 @@ def dzi_asso(path):
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
+    # check that level, col and row are integers
+    if not isinstance(level, int) or not isinstance(col, int) or not isinstance(
+        row, int
+    ):
+        abort(404)
+        return
+    if not format in ["jpeg", "png"]:
+        abort(404)
+        return
     completePath = os.path.normpath(os.path.join(app.basedir, path))
     if not completePath.startswith(app.basedir):
         # Directory traversal
@@ -1052,6 +1065,8 @@ def runPlugin(pluginName):
     for directory in [app.config["PLUGIN_FOLDER_USER"], app.config["PLUGIN_FOLDER"]]:
         filename = pluginName + ".js"
         completePath = os.path.normpath(os.path.join(directory, pluginName + ".js"))
+        if not completePath.startswith(directory):
+            continue
         directory = os.path.dirname(completePath)
         filename = os.path.basename(completePath)
         if os.path.isfile(completePath):
@@ -1064,6 +1079,9 @@ def runPlugin(pluginName):
 
 @app.route("/plugins/<path:pluginName>/<path:method>", methods=["GET", "POST"])
 def pluginJS(pluginName, method):
+    pluginName = secure_filename(pluginName)
+    method = secure_filename(method)
+
     pluginModule = load_plugin(pluginName)
     pluginInstance = pluginModule.Plugin(app)
     pluginMethod = getattr(pluginInstance, method)
