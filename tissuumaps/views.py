@@ -1061,6 +1061,7 @@ def get_file_tree():
         if not root_path.startswith(app.basedir):
             # Directory traversal
             abort(404)
+            return
         return jsonify(get_file_tree_data(root_path))
     else:
         return jsonify([])
