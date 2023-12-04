@@ -329,8 +329,6 @@ def internal_server_error(e):
         ),
         500,
     )
-    return redirect("/"), 500, {"Refresh": "1; url=/"}
-
 
 def _get_slide(path, originalPath=None):
     path = os.path.abspath(os.path.join(app.basedir, path))
@@ -414,6 +412,9 @@ def index():
 @requires_auth
 def base_static(path):
     completePath = os.path.abspath(os.path.join(app.basedir, path))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     directory = os.path.dirname(completePath) + "/web/"
     filename = os.path.basename(completePath)
     return send_from_directory(directory, filename)
@@ -432,6 +433,9 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    if not path.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     if not os.path.isfile(path) and not os.path.isfile(path + ".dzi"):
         abort(404)
     # slide = _get_slide(path)
@@ -495,7 +499,10 @@ def tmapFile(filename):
 
     # Create the absolute path to the JSON file
     json_filename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
-
+    if not json_filename.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
+    
     # Define error message feedback to user, None means no error message
     errorMessage = None
     warningMessage = None
@@ -624,32 +631,6 @@ def csvFile(completePath):
     if os.path.isfile(completePath):
         # We can not gzip csv files with the PapaParse library
         return send_from_directory(directory, filename)
-
-        # We keep the old gzip code anyway:
-        # gz files have to be names cgz for some browser
-        if os.path.isfile(completePath + ".gz"):
-            os.rename(completePath + ".gz", completePath + ".cgz")
-
-        generate_cgz = False
-        if not os.path.isfile(completePath + ".cgz"):
-            generate_cgz = True
-        elif os.path.getmtime(completePath) > os.path.getmtime(completePath + ".cgz"):
-            # In this case, the csv file has been recently modified and the cgz file is
-            # stale, so it must be regenerated.
-            generate_cgz = True
-        if generate_cgz:
-            with open(completePath, "rb") as f_in, gzip.open(
-                completePath + ".cgz", "wb", compresslevel=9
-            ) as f_out:
-                f_out.writelines(f_in)
-
-        response = make_response(send_from_directory(directory, filename + ".cgz"))
-        response.headers["Content-Encoding"] = "gzip"
-        response.headers["Vary"] = "Accept-Encoding"
-        response.headers["Transfer-Encoding"] = "gzip"
-        response.headers["Content-Length"] = os.path.getsize(completePath + ".cgz")
-        response.headers["Content-Type"] = "text/csv; charset=UTF-8"
-        return response
     else:
         abort(404)
 
@@ -657,7 +638,10 @@ def csvFile(completePath):
 @app.route("/<path:completePath>.<any(json, geojson, pbf):ext>")
 @requires_auth
 def jsonFile(completePath, ext):
-    completePath = os.path.join(app.basedir, completePath + "." + ext)
+    completePath = os.path.abspath(os.path.join(app.basedir, completePath + "." + ext))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -670,12 +654,15 @@ def jsonFile(completePath, ext):
 @requires_auth
 def dzi(path):
     completePath = os.path.join(app.basedir, path)
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     # Check if a .dzi file exists, else use OpenSlide:
     if os.path.isfile(completePath + ".dzi"):
         directory = os.path.dirname(completePath)
         filename = os.path.basename(completePath) + ".dzi"
         return send_from_directory(directory, filename)
-    slide = _get_slide(path)
+    slide = _get_slide(completePath)
     format = app.config["DEEPZOOM_FORMAT"]
     resp = make_response(slide.get_dzi(format))
     resp.mimetype = "application/xml"
@@ -685,7 +672,11 @@ def dzi(path):
 @app.route("/<path:path>.dzi/info")
 @requires_auth
 def dzi_asso(path):
-    slide = _get_slide(path)
+    completePath = os.path.join(app.basedir, path)
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
+    slide = _get_slide(completePath)
     associated_images = []
     for key, im in slide.associated_images.items():
         output = io.BytesIO()
@@ -702,7 +693,10 @@ def dzi_asso(path):
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
-    completePath = os.path.join(app.basedir, path)
+    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     if os.path.isfile(f"{completePath}_files/{level}/{col}_{row}.{format}"):
         directory = f"{completePath}_files/{level}/"
         filename = f"{col}_{row}.{format}"
@@ -810,6 +804,9 @@ def h5ad(filename, ext):
     completePath = os.path.abspath(
         os.path.join(app.basedir, path, filename) + "." + ext
     )
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     # Check if a .h5ad file exists:
     if not os.path.isfile(completePath):
         abort(404)
@@ -837,7 +834,10 @@ def h5ad(filename, ext):
     "/<path:path>.<any(h5ad, adata):ext>_files/csv/<string:type>/<string:filename>.csv"
 )
 def h5ad_csv(path, type, filename, ext):
-    completePath = os.path.join(app.basedir, path + "." + ext)
+    completePath = os.path.abspath(os.path.join(app.basedir, path + "." + ext))
+    if not completePath.startswith(app.basedir):
+        # Directory traversal
+        abort(404)
     filename = unquote(filename)
     csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
     generate_csv = True
@@ -1050,7 +1050,10 @@ def get_tree():
 @app.route("/get_file_tree")
 def get_file_tree():
     if not app.config["READ_ONLY"]:
-        root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")
+        root_path = os.path.abspath(app.basedir + "/" + request.args.get("root", "./"))
+        if not root_path.startswith(app.basedir):
+            # Directory traversal
+            abort(404)
         return jsonify(get_file_tree_data(root_path))
     else:
         return jsonify([])
