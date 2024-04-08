@@ -143,12 +143,29 @@ class ImageConverter:
             def convertThread():
                 try:
                     imgVips = pyvips.Image.new_from_file(self.inputImage)
-                    minVal = imgVips.percent(0.5)
-                    maxVal = imgVips.percent(99.5)
+                    min_percent = app.config["VIPS_MIN_OUTLIER_PERC"]
+                    max_percent = app.config["VIPS_MAX_OUTLIER_PERC"]
+
+                    minVal = imgVips.percent(min_percent)
+                    maxVal = imgVips.percent(max_percent)
+
+                    if app.config["VIPS_EXCLUDE_MIN_INTENSITY"]:
+                        absoluteMinVal = imgVips.min()
+                        imgVips_tmp = (
+                            (imgVips == absoluteMinVal)
+                            .bandand()
+                            .ifthenelse(maxVal + 1, imgVips)
+                        )
+                        minVal = imgVips_tmp.percent(min_percent)
+
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if minVal < 0 or maxVal > 255:
+                    if (
+                        app.config["VIPS_FORCE_RESCALE"]
+                        or imgVips.min() < 0
+                        or imgVips.max() > 255
+                    ):
                         logging.debug(
                             f"Rescaling image {self.inputImage}: "
                             f"{minVal} - {maxVal} to 0 - 255"
@@ -164,7 +181,7 @@ class ImageConverter:
                         tile_width=256,
                         tile_height=256,
                         compression="jpeg",
-                        Q=95,
+                        Q=app.config["VIPS_JPEG_COMPRESSION"],
                         properties=True,
                     )
                 except Exception:
@@ -391,11 +408,32 @@ def get_view_function(url, method="GET"):
 @requires_auth
 def index():
     if app.config["DEFAULT_PROJECT"]:
-        view_function = get_view_function(
-            "/" + app.config["DEFAULT_PROJECT"], method="GET"
-        )
-        if view_function:
-            return view_function[0](**view_function[1])
+        # Check if the default project exists and is accessible
+        default_project = os.path.join(app.basedir, app.config["DEFAULT_PROJECT"])
+        if os.path.isfile(default_project):
+            view_function = get_view_function(
+                "/" + app.config["DEFAULT_PROJECT"], method="GET"
+            )
+            if view_function:
+                return view_function[0](**view_function[1])
+
+        elif app.config["PROJECT_LIST"]:
+            projectList = [
+                {"name": "Select a dataset", "path": "", "selected": True}
+            ] + getProjectList(os.path.dirname(default_project))
+            if len(projectList) > 0:
+                projectList[0]["selected"] = True
+                return render_template(
+                    "tissuumaps.html",
+                    plugins=[],
+                    jsonProject={},
+                    isStandalone=app.config["isStandalone"],
+                    readOnly=app.config["READ_ONLY"],
+                    collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
+                    projectList=projectList,
+                    version=app.config["VERSION"],
+                    schema_version=current_schema_module.VERSION,
+                )
 
     indexPath = os.path.normpath(os.path.join(app.basedir, "index.html"))
     if os.path.isfile(indexPath) and app.config["READ_ONLY"]:
@@ -407,6 +445,7 @@ def index():
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -496,6 +535,20 @@ def h5adFile_old(path, filename, ext):
     if path == "":
         path = "./"
     return redirect(url_for("h5ad", filename=filename, ext=ext) + "?path=" + path)
+
+
+def getProjectList(path):
+    # Add project list if app.config["PROJECT_LIST"] is True
+    projectList = []
+    # Browse the directory of json_filename, with only one level
+    for item in sorted(os.listdir(path)):
+        file = os.path.join(path, item)
+        if os.path.isfile(file) and file.endswith(".tmap"):
+            # Add file relative to the basedir
+            file = os.path.relpath(file, app.basedir)
+            project = {"name": file[:-5], "path": file, "selected": False}
+            projectList.append(project)
+    return projectList
 
 
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
@@ -617,6 +670,17 @@ def tmapFile(filename):
         else:
             plugins = [p["module"] for p in app.config["PLUGINS"]]
 
+        # Get the list of projects in the current directory
+        projectList = (
+            getProjectList(os.path.dirname(json_filename))
+            if app.config["PROJECT_LIST"]
+            else []
+        )
+        file = os.path.relpath(json_filename, app.basedir)
+        for p in projectList:
+            if p["path"] == file:
+                p["selected"] = True
+
         # Render the template with appropriate data
         return render_template(
             "tissuumaps.html",
@@ -624,6 +688,8 @@ def tmapFile(filename):
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
+            collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
+            projectList=projectList,
             version=app.config["VERSION"],
             schema_version=current_schema_module.VERSION,
             message=errorMessage,
@@ -868,6 +934,7 @@ def h5ad(filename, ext):
         jsonProject=state,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -1031,6 +1098,7 @@ def exportToStatic(state, folderpath, previouspath):
                 jsonProject=state,
                 isStandalone=False,
                 readOnly=True,
+                collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
                 version=app.config["VERSION"],
                 schema_version=current_schema_module.VERSION,
             )
