@@ -50,7 +50,7 @@ jobs:
             brew install vips openslide
           fi
           python -m pip install --upgrade pip
-          pip install pyinstaller==5.12.0 --upgrade
+          pip install pyinstaller==6.5.0 --upgrade
 
       - name: ⬇️ Install TissUUmaps
         shell: bash
